@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import databaseService from "../AppWrite/database_service";
 import bucketService from "../AppWrite/bucket_service";
-import  Button from "../components/Button";
-import  Container from "../components/Container/Container"
+import Button from "../components/Button";
+import Container from "../components/Container/Container";
 import parse from "html-react-parser";
 import { useSelector } from "react-redux";
 
@@ -12,29 +12,37 @@ export default function PostPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
 
+  const [loader, setLoader] = useState(false);
+
   const userData = useSelector((state) => state.auth.user);
 
   const isAuthor = post && userData ? post.userId === userData.$id : false;
 
   useEffect(() => {
+    setLoader(true);
     if (slug) {
-      databaseService.getPost(slug).then((post) => {
-        if (post) setPost(post);
-        else navigate("/");
-      });
+      databaseService
+        .getPost(slug)
+        .then((post) => {
+          if (post) setPost(post);
+          else navigate("/");
+        })
+        .finally(() => setLoader(false));
     } else navigate("/");
-  }, [slug, navigate]);
+  }, [slug, navigate, setPost]);
 
   const deletePost = () => {
     databaseService.deletePost(post.$id).then((status) => {
       if (status) {
         bucketService.deleteFile(post.featuredImage);
         navigate("/");
+        alert("Post deleted successfully");
       }
     });
   };
 
-  return post ? (
+  return !loader ? (
+    post && (
     <div className="py-8">
       <Container>
         <div className="w-full flex justify-center mb-4 relative border rounded-xl p-2">
@@ -62,6 +70,9 @@ export default function PostPage() {
         </div>
         <div className="browser-css">{parse(post.content)}</div>
       </Container>
-    </div>
-  ) : null;
+    </div>)):(<Container>
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    </Container>);
 }

@@ -12,8 +12,11 @@ function LogoutBtn() {
       .logout()
       .then(() => {
         dispatch(logout());
-      })
-      navigate("/");
+      }).finally(() => {
+        alert("You have been logged out")
+        navigate("/");
+      });
+      
   }
 
   return (

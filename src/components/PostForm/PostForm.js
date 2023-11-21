@@ -20,11 +20,13 @@ export default function PostForm({ post }) {
       },
     });
 
-    const navigate = useNavigate();
-    const userData = useSelector((state) => state.auth.user);
+  const navigate = useNavigate();
+  const userData = useSelector((state) => state.auth.user);
+  const [loader, setLoader] = React.useState(false);
 
   const submit = async (data) => {
-    console.log("data",data);
+    setLoader(true);
+
     if (post) {
       const file = data.image[0]
         ? await bucketService.uploadFile(data.image[0])
@@ -32,7 +34,6 @@ export default function PostForm({ post }) {
 
       if (file) {
         bucketService.deleteFile(post.featuredImage);
-        console.log("File", file);
       }
 
       const updatedPost = await databaseService.updatePost(post.$id, {
@@ -45,21 +46,14 @@ export default function PostForm({ post }) {
       }
     } else {
       const file = data.image[0]
-      ? await bucketService.uploadFile(data.image[0])
-      : null;
-      console.log("File", file.$id);
-      console.log("User", userData);
+        ? await bucketService.uploadFile(data.image[0])
+        : null;
       if (file) {
         const fileId = file.$id;
-        console.log({
-          ...data,
-          userId: userData.$id,
-          featuredImage: fileId,
-        });
         const newPost = await databaseService.createPost({
           ...data,
           userId: userData.$id,
-          featuredImage: String(fileId) ,
+          featuredImage: String(fileId),
         });
 
         if (newPost) {
@@ -67,8 +61,10 @@ export default function PostForm({ post }) {
         }
       }
     }
+
+    setLoader(false);
   };
-  
+
   const slugTransform = useCallback((value) => {
     if (value && typeof value === "string")
       return value
@@ -93,64 +89,80 @@ export default function PostForm({ post }) {
   }, [watch, slugTransform, setValue]);
 
   return (
-    <form onSubmit={handleSubmit(submit)} className="flex flex-wrap">
-      <div className="w-2/3 px-2">
-        <Input
-          label="Title :"
-          placeholder="Title"
-          className="mb-4"
-          {...register("title", { required: true })}
-        />
-        <input
-          readOnly
-          label="Slug :"
-          placeholder="Slug"
-          className="mb-4 px-3 py-2 rounded-lg bg-white text-black outline-none focus:bg-gray-50 duration-200 border border-gray-200 w-full"
-          {...register("slug", { required: true })}
-          onInput={(e) => {
-            setValue("slug", slugTransform(e.currentTarget.value), {
-              shouldValidate: true,
-            });
+    <>
+      {loader && (
+        <div
+          className="flex justify-center items-center h-screen"
+          style={{
+            top: "20px",
+            width: "100%",
+            position: "fixed",
+            zIndex: "999",
           }}
-        />
-        <RTE
-          label="Content :"
-          name="content"
-          control={control}
-          defaultValue={getValues("content")}
-        />
-      </div>
-      <div className="w-1/3 px-2">
-        <Input
-          label="Featured Image :"
-          type="file"
-          className="mb-4"
-          accept="image/png, image/jpg, image/jpeg, image/gif"
-          {...register("image", { required: !post })}
-        />
-        {post && (
-          <div className="w-full mb-4">
-            <img
-              src={bucketService.previewFile(post.featuredImage)}
-              alt={post.title}
-              className="rounded-lg"
-            />
-          </div>
-        )}
-        <Select
-          options={["active", "inactive"]}
-          label="Status"
-          className="mb-4"
-          {...register("status", { required: true })}
-        />
-        <Button
-          type="submit"
-          bgColor={post ? "bg-green-500" : undefined}
-          className="w-full"
         >
-          {post ? "Update" : "Submit"}
-        </Button>
-      </div>
-    </form>
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-red-900"></div>
+        </div>
+      )}
+      <form onSubmit={handleSubmit(submit)} className="flex flex-wrap">
+        <div className="w-2/3 px-2">
+          <Input
+            label="Title :"
+            placeholder="Title"
+            className="mb-4"
+            {...register("title", { required: true })}
+          />
+          <input
+            readOnly
+            label="Slug :"
+            placeholder="Slug"
+            value={post ? post.$id : ""}
+            className="mb-4 px-3 py-2 rounded-lg bg-white text-black outline-none focus:bg-gray-50 duration-200 border border-gray-200 w-full"
+            {...register("slug", { required: true })}
+            onInput={(e) => {
+              setValue("slug", slugTransform(e.currentTarget.value), {
+                shouldValidate: true,
+              });
+            }}
+          />
+          <RTE
+            label="Content :"
+            name="content"
+            control={control}
+            defaultValue={getValues("content")}
+          />
+        </div>
+        <div className="w-1/3 px-2">
+          <Input
+            label="Featured Image :"
+            type="file"
+            className="mb-4"
+            accept="image/png, image/jpg, image/jpeg, image/gif"
+            {...register("image", { required: !post })}
+          />
+          {post && (
+            <div className="w-full mb-4">
+              <img
+                src={bucketService.previewFile(post.featuredImage)}
+                alt={post.title}
+                className="rounded-lg"
+              />
+            </div>
+          )}
+          <Select
+            options={["active", "inactive"]}
+            label="Status"
+            className="mb-4"
+            {...register("status", { required: true })}
+          />
+          <Button
+            type="submit"
+            bgColor={post ? "bg-green-500" : undefined}
+            className="w-full"
+          >
+            {post ? "Update" : "Submit"}
+          </Button>
+        </div>
+      </form>
+    </>
   );
 }
